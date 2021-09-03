@@ -1,0 +1,5 @@
+domain: halkyon.io
+layout:
+- quarkus.javaoperatorsdk.io/v1-alpha
+projectName: expose
+version: "3"
