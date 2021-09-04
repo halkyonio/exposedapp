@@ -28,7 +28,7 @@ public class ExposedAppController implements ResourceController<ExposedApp> {
 
     @Override
     public void init(EventSourceManager eventSourceManager) {
-        // TODO: fill in init
+        eventSourceManager.registerEventSource("exposedapp-ingress-watcher", IngressEventSource.create(client));
     }
 
     @Override
