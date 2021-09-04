@@ -5,7 +5,7 @@ import io.javaoperatorsdk.operator.api.*;
 import io.javaoperatorsdk.operator.api.Context;
 import io.javaoperatorsdk.operator.processing.event.EventSourceManager;
 
-@Controller
+@Controller(namespaces = Controller.WATCH_CURRENT_NAMESPACE, name = "exposedapp")
 public class ExposedAppController implements ResourceController<ExposedApp> {
 
     private final KubernetesClient client;
