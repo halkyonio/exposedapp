@@ -100,7 +100,21 @@ public class ExposedAppController implements ResourceController<ExposedApp> {
                 .build());
         log.info("Ingress {} handled", ingress.getMetadata().getName());
 
-        return UpdateControl.noUpdate();
+        // add status to resource
+        final var status = ingress.getStatus();
+        if (status != null) {
+            final var ingresses = status.getLoadBalancer().getIngress();
+            if (ingresses != null && !ingresses.isEmpty()) {
+                // only set the status if the ingress is ready to provide the info we need
+                final var url = "https://" + ingresses.get(0).getHostname();
+                log.info("App {} is exposed and ready to used at {}", name, url);
+                resource.setStatus(new ExposedAppStatus("exposed", url));
+                return UpdateControl.updateStatusSubResource(resource);
+            }
+        }
+
+        resource.setStatus(new ExposedAppStatus("processing", null));
+        return UpdateControl.updateStatusSubResource(resource);
     }
 
     private ObjectMeta createMetadata(ExposedApp resource, Map<String, String> labels) {
