@@ -1,21 +1,27 @@
 package io.halkyon;
 
+import static io.javaoperatorsdk.operator.api.reconciler.Constants.WATCH_CURRENT_NAMESPACE;
+
 import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
 import io.fabric8.kubernetes.api.model.ServiceBuilder;
 import io.fabric8.kubernetes.api.model.apps.DeploymentBuilder;
 import io.fabric8.kubernetes.api.model.networking.v1.IngressBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import io.javaoperatorsdk.operator.api.*;
-import io.javaoperatorsdk.operator.api.Context;
-import io.javaoperatorsdk.operator.processing.event.EventSourceManager;
+import io.javaoperatorsdk.operator.api.reconciler.Context;
+import io.javaoperatorsdk.operator.api.reconciler.ControllerConfiguration;
+import io.javaoperatorsdk.operator.api.reconciler.EventSourceContext;
+import io.javaoperatorsdk.operator.api.reconciler.EventSourceInitializer;
+import io.javaoperatorsdk.operator.api.reconciler.Reconciler;
+import io.javaoperatorsdk.operator.api.reconciler.UpdateControl;
+import io.javaoperatorsdk.operator.processing.event.source.EventSource;
+import java.util.List;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Map;
-
-@Controller(namespaces = Controller.WATCH_CURRENT_NAMESPACE, name = "exposedapp")
-public class ExposedAppController implements ResourceController<ExposedApp> {
+@ControllerConfiguration(namespaces = WATCH_CURRENT_NAMESPACE, name = "exposedapp")
+public class ExposedAppController implements Reconciler<ExposedApp>, EventSourceInitializer<ExposedApp> {
     private static final Logger log = LoggerFactory.getLogger(ExposedAppController.class);
     public static final String APP_LABEL = "app.kubernetes.io/name";
     private final KubernetesClient client;
@@ -24,16 +30,13 @@ public class ExposedAppController implements ResourceController<ExposedApp> {
         this.client = client;
     }
 
-    // TODO Fill in the rest of the controller
-
     @Override
-    public void init(EventSourceManager eventSourceManager) {
-        eventSourceManager.registerEventSource("exposedapp-ingress-watcher", IngressEventSource.create(client));
+    public List<EventSource> prepareEventSources(EventSourceContext<ExposedApp> eventSourceContext) {
+        return List.of(IngressEventSource.create(client));
     }
-
+    
     @Override
-    public UpdateControl<ExposedApp> createOrUpdateResource(
-        ExposedApp resource, Context<ExposedApp> context) {
+    public UpdateControl<ExposedApp> reconcile(ExposedApp resource, Context context) {
         final var spec = resource.getSpec();
         final var name = resource.getMetadata().getName();
         final var imageRef = spec.getImageRef();
@@ -109,12 +112,12 @@ public class ExposedAppController implements ResourceController<ExposedApp> {
                 final var url = "https://" + ingresses.get(0).getHostname();
                 log.info("App {} is exposed and ready to used at {}", name, url);
                 resource.setStatus(new ExposedAppStatus("exposed", url));
-                return UpdateControl.updateStatusSubResource(resource);
+                return UpdateControl.updateStatus(resource);
             }
         }
 
         resource.setStatus(new ExposedAppStatus("processing", null));
-        return UpdateControl.updateStatusSubResource(resource);
+        return UpdateControl.updateStatus(resource);
     }
 
     private ObjectMeta createMetadata(ExposedApp resource, Map<String, String> labels) {
