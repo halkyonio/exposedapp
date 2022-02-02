@@ -2,6 +2,7 @@ package io.halkyon;
 
 import static io.javaoperatorsdk.operator.api.reconciler.Constants.WATCH_CURRENT_NAMESPACE;
 
+import io.fabric8.kubernetes.api.model.LoadBalancerIngress;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
 import io.fabric8.kubernetes.api.model.Service;
@@ -26,12 +27,12 @@ import org.slf4j.LoggerFactory;
         @Dependent(resourceType = Ingress.class, type = IngressDependent.class)
     }
 )
-public class ExposedAppController implements Reconciler<ExposedApp>, ContextInitializer<ExposedApp> {
-    static final Logger log = LoggerFactory.getLogger(ExposedAppController.class);
+public class ExposedAppReconciler implements Reconciler<ExposedApp>, ContextInitializer<ExposedApp> {
+    static final Logger log = LoggerFactory.getLogger(ExposedAppReconciler.class);
     static final String APP_LABEL = "app.kubernetes.io/name";
     static final String LABELS_CONTEXT_KEY = "labels";
 
-    public ExposedAppController() {}
+    public ExposedAppReconciler() {}
 
     @Override
     public void initContext(ExposedApp exposedApp, Context context) {
@@ -52,7 +53,9 @@ public class ExposedAppController implements Reconciler<ExposedApp>, ContextInit
                 final var ingresses = status.getLoadBalancer().getIngress();
                 if (ingresses != null && !ingresses.isEmpty()) {
                     // only set the status if the ingress is ready to provide the info we need
-                    final var url = "https://" + ingresses.get(0).getHostname();
+                    LoadBalancerIngress ing = ingresses.get(0);
+                    String hostname = ing.getHostname();
+                    final var url = "https://" + (hostname != null ?  hostname : ing.getIp());
                     log.info("App {} is exposed and ready to used at {}", name, url);
                     exposedApp.setStatus(new ExposedAppStatus("exposed", url));
                     return UpdateControl.updateStatus(exposedApp);

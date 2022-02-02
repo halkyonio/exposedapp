@@ -15,7 +15,7 @@ public class IngressEventSource extends AbstractEventSource implements Watcher<I
 
     public static IngressEventSource create(KubernetesClient client) {
         final var eventSource = new IngressEventSource();
-        client.network().v1().ingresses().withLabel(ExposedAppController.APP_LABEL).watch(eventSource);
+        client.network().v1().ingresses().withLabel(ExposedAppReconciler.APP_LABEL).watch(eventSource);
         return eventSource;
     }
 

@@ -1,7 +1,7 @@
 package io.halkyon;
 
-import static io.halkyon.ExposedAppController.LABELS_CONTEXT_KEY;
-import static io.halkyon.ExposedAppController.createMetadata;
+import static io.halkyon.ExposedAppReconciler.LABELS_CONTEXT_KEY;
+import static io.halkyon.ExposedAppReconciler.createMetadata;
 
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ServiceBuilder;
@@ -13,6 +13,7 @@ import java.util.Map;
 public class ServiceDependent implements DependentResource<Service, ExposedApp>, Builder<Service, ExposedApp> {
 
   @Override
+  @SuppressWarnings("unchecked")
   public Service buildFor(ExposedApp exposedApp, Context context) {
     final var labels = (Map<String, String>) context.getMandatory(LABELS_CONTEXT_KEY, Map.class);
 
@@ -28,7 +29,7 @@ public class ServiceDependent implements DependentResource<Service, ExposedApp>,
         .withType("ClusterIP")
         .endSpec()
         .build();
-    ExposedAppController.log.info("Service {} created", service.getMetadata().getName());
+    ExposedAppReconciler.log.info("Service {} created", service.getMetadata().getName());
     return service;
   }
 }
