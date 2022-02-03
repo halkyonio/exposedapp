@@ -72,12 +72,7 @@ public class ExposedAppReconciler implements Reconciler<ExposedApp>, ContextInit
         final var metadata = resource.getMetadata();
         return new ObjectMetaBuilder()
                 .withName(metadata.getName())
-                .addNewOwnerReference()
-                .withUid(metadata.getUid())
-                .withApiVersion(resource.getApiVersion())
-                .withName(metadata.getName())
-                .withKind(resource.getKind())
-                .endOwnerReference()
+                .withNamespace(metadata.getNamespace())
                 .withLabels(labels)
                 .build();
     }
