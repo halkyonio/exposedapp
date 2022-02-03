@@ -3,24 +3,29 @@ package io.halkyon;
 import static io.halkyon.ExposedAppReconciler.LABELS_CONTEXT_KEY;
 import static io.halkyon.ExposedAppReconciler.createMetadata;
 
+import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.api.model.apps.DeploymentBuilder;
 import io.javaoperatorsdk.operator.api.config.DependentResource;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
-import io.javaoperatorsdk.operator.api.reconciler.dependent.Builder;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 
-public class DeploymentDependent implements DependentResource<Deployment, ExposedApp>,
-    Builder<Deployment, ExposedApp> {
+public class DeploymentDependent implements DependentResource<Deployment, ExposedApp> {
 
-  @Override
   @SuppressWarnings("unchecked")
-  public Deployment buildFor(ExposedApp exposedApp, Context context) {
+  public Deployment desired(ExposedApp exposedApp, Context context) {
     final var labels = (Map<String, String>) context.getMandatory(LABELS_CONTEXT_KEY, Map.class);
     final var name = exposedApp.getMetadata().getName();
-    final var imageRef = exposedApp.getSpec().getImageRef();
+    final var spec = exposedApp.getSpec();
+    final var imageRef = spec.getImageRef();
+    final var env = spec.getEnv();
 
-    final var deployment = new DeploymentBuilder()
+    var containerBuilder = new DeploymentBuilder()
         .withMetadata(createMetadata(exposedApp, labels))
         .withNewSpec()
         .withNewSelector().withMatchLabels(labels).endSelector()
@@ -28,7 +33,17 @@ public class DeploymentDependent implements DependentResource<Deployment, Expose
         .withNewMetadata().withLabels(labels).endMetadata()
         .withNewSpec()
         .addNewContainer()
-        .withName(name).withImage(imageRef)
+        .withName(name).withImage(imageRef);
+
+    // add env variables
+    if (env != null) {
+      env.forEach((key, value) -> containerBuilder.addNewEnv()
+          .withName(key.toUpperCase())
+          .withValue(value)
+          .endEnv());
+    }
+
+    return containerBuilder
         .addNewPort()
         .withName("http").withProtocol("TCP").withContainerPort(8080)
         .endPort()
@@ -37,7 +52,24 @@ public class DeploymentDependent implements DependentResource<Deployment, Expose
         .endTemplate()
         .endSpec()
         .build();
-    ExposedAppReconciler.log.info("Deployment {} created", deployment.getMetadata().getName());
-    return deployment;
+  }
+
+  @Override
+  public boolean match(Deployment actual, ExposedApp primary, Context context) {
+    final var spec = primary.getSpec();
+    Optional<Container> container = actual.getSpec().getTemplate().getSpec().getContainers()
+        .stream()
+        .findFirst();
+    return container.map(
+            c -> spec.getImageRef().equals(c.getImage()) && (spec.getEnv() == null || spec.getEnv()
+                .equals(convert(c.getEnv()))))
+        .orElse(false);
+  }
+
+  private Map<String, String> convert(List<EnvVar> envVars) {
+    final var result = new HashMap<String, String>(envVars.size());
+    envVars.forEach(
+        envVar -> result.put(envVar.getName().toLowerCase(Locale.ROOT), envVar.getValue()));
+    return result;
   }
 }

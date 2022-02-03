@@ -3,4 +3,4 @@ kind: ExposedApp
 metadata:
   name: hello-quarkus
 spec:
-  imageRef: localhost:5000/quarkus/hello
+  imageRef: 'claprun/hello:1.0.0-SNAPSHOT'

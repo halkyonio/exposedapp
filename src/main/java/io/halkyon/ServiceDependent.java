@@ -7,17 +7,16 @@ import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ServiceBuilder;
 import io.javaoperatorsdk.operator.api.config.DependentResource;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
-import io.javaoperatorsdk.operator.api.reconciler.dependent.Builder;
 import java.util.Map;
 
-public class ServiceDependent implements DependentResource<Service, ExposedApp>, Builder<Service, ExposedApp> {
+public class ServiceDependent implements DependentResource<Service, ExposedApp> {
 
   @Override
   @SuppressWarnings("unchecked")
-  public Service buildFor(ExposedApp exposedApp, Context context) {
+  public Service desired(ExposedApp exposedApp, Context context) {
     final var labels = (Map<String, String>) context.getMandatory(LABELS_CONTEXT_KEY, Map.class);
 
-    final var service = new ServiceBuilder()
+    return new ServiceBuilder()
         .withMetadata(createMetadata(exposedApp, labels))
         .withNewSpec()
         .addNewPort()
@@ -29,7 +28,5 @@ public class ServiceDependent implements DependentResource<Service, ExposedApp>,
         .withType("ClusterIP")
         .endSpec()
         .build();
-    ExposedAppReconciler.log.info("Service {} created", service.getMetadata().getName());
-    return service;
   }
 }
