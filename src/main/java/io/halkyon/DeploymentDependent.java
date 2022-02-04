@@ -7,8 +7,8 @@ import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.api.model.apps.DeploymentBuilder;
-import io.javaoperatorsdk.operator.api.config.DependentResource;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
+import io.javaoperatorsdk.operator.api.reconciler.dependent.DependentResource;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -18,7 +18,7 @@ import java.util.Optional;
 public class DeploymentDependent implements DependentResource<Deployment, ExposedApp> {
 
   @SuppressWarnings("unchecked")
-  public Deployment desired(ExposedApp exposedApp, Context context) {
+  public Optional<Deployment> desired(ExposedApp exposedApp, Context context) {
     final var labels = (Map<String, String>) context.getMandatory(LABELS_CONTEXT_KEY, Map.class);
     final var name = exposedApp.getMetadata().getName();
     final var spec = exposedApp.getSpec();
@@ -43,7 +43,7 @@ public class DeploymentDependent implements DependentResource<Deployment, Expose
           .endEnv());
     }
 
-    return containerBuilder
+    return Optional.of(containerBuilder
         .addNewPort()
         .withName("http").withProtocol("TCP").withContainerPort(8080)
         .endPort()
@@ -51,7 +51,7 @@ public class DeploymentDependent implements DependentResource<Deployment, Expose
         .endSpec()
         .endTemplate()
         .endSpec()
-        .build();
+        .build());
   }
 
   @Override

@@ -5,20 +5,21 @@ import static io.halkyon.ExposedAppReconciler.createMetadata;
 
 import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
 import io.fabric8.kubernetes.api.model.networking.v1.IngressBuilder;
-import io.javaoperatorsdk.operator.api.config.DependentResource;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
+import io.javaoperatorsdk.operator.api.reconciler.dependent.DependentResource;
 import java.util.Map;
+import java.util.Optional;
 
 public class IngressDependent implements DependentResource<Ingress, ExposedApp> {
 
   @Override
   @SuppressWarnings("unchecked")
-  public Ingress desired(ExposedApp exposedApp, Context context) {
+  public Optional<Ingress> desired(ExposedApp exposedApp, Context context) {
     final var labels = (Map<String, String>) context.getMandatory(LABELS_CONTEXT_KEY, Map.class);
     final var metadata = createMetadata(exposedApp, labels);
     metadata.setAnnotations(Map.of("nginx.ingress.kubernetes.io/rewrite-target", "/"));
 
-    return new IngressBuilder()
+    return Optional.of(new IngressBuilder()
         .withMetadata(metadata)
         .withNewSpec()
         .addNewRule()
@@ -36,6 +37,6 @@ public class IngressDependent implements DependentResource<Ingress, ExposedApp> 
         .endHttp()
         .endRule()
         .endSpec()
-        .build();
+        .build());
   }
 }
